@@ -2,8 +2,10 @@ import os
 import json
 from pathlib import Path
 
-pathroot = Path(f'{os.environ["USERPROFILE"]}\\PycharmProjects\\lux-ai\\')
-pathdl = Path(f'{os.environ["USERPROFILE"]}\\Downloads\\')
+# Configure me!
+# pathroot = Path(f'{os.environ["USERPROFILE"]}') / 'PycharmProjects' / 'lux-ai'
+pathroot = Path(__file__).parents[1]  # Root location of this project
+pathdl = Path(f'{os.environ["USERPROFILE"]}') / 'Downloads'  # Download location of replays
 
 file_run_replay_html = pathroot / 'replays_active' / 'run_replay.html'
 file_live_replay_html = pathroot / 'replays_active' / 'live_replay.html'

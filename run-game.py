@@ -1,5 +1,5 @@
-from kaggle_environments import make
 import utils
+from kaggle_environments import make
 from luxbot.agent import agent
 
 

@@ -24,15 +24,27 @@ $ python ./create-bot.py version_id
 
 # Debugging
 The agent (live or in a replay) should halt at set breakpoints. However
-`kaggle_environments/agent.py` will play an agent under the following IO redirect context:
+`kaggle_environments/agent.py` will play an agent under the following IO redirect context and try/except block:
 ```python
 with StringIO() as out_buffer, StringIO() as err_buffer, redirect_stdout(out_buffer), redirect_stderr(err_buffer):
+    try:
+        start = perf_counter()
+        action = self.agent(*args)
+    except Exception as e:
+        traceback.print_exc(file=err_buffer)
+        action = e
     ...
 ```
 Which will also redirect for example the output from PyCharms debug console. For the purpose of local debugging you can 
-disable the redirect with this edit of the context in the source module file:
+disable the redirect and exception catch with this edit in the source module file:
 ```python
 with StringIO() as out_buffer, StringIO() as err_buffer: #, redirect_stdout(out_buffer), redirect_stderr(err_buffer):
-    ...
+    # try:
+    start = perf_counter()
+    action = self.agent(*args)
+    # except Exception as e:
+    #     traceback.print_exc(file=err_buffer)
+    #     action = e
+    # Allow up to 1k log characters per step which is ~1MB per 600 step episode
 ```
 

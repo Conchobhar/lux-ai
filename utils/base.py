@@ -3,9 +3,12 @@ import json
 from pathlib import Path
 
 # Configure me!
-# pathroot = Path(f'{os.environ["USERPROFILE"]}') / 'PycharmProjects' / 'lux-ai'
+if os.name == 'nt':  # Windows
+    HOME = os.environ["USERPROFILE"]
+else:
+    HOME = os.environ["HOME"]
 pathroot = Path(__file__).parents[1]  # Root location of this project
-pathdl = Path(f'{os.environ["USERPROFILE"]}') / 'Downloads'  # Download location of replays
+pathdl = Path(f'{HOME}') / 'Downloads'  # Download location of replays
 
 file_run_replay_html = pathroot / 'replays_active' / 'run_replay.html'
 file_live_replay_html = pathroot / 'replays_active' / 'live_replay.html'

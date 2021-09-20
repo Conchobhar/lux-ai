@@ -1,16 +1,16 @@
 # Lux AI Challenge
 https://www.kaggle.com/c/lux-ai-2021/
 
-Contains development enviornment for building bots.
+Contains development enviornment for building bots with PyCharm in mind.
 
 The current `luxbot` contains the 
-simple [starter kit bot](https://github.com/Lux-AI-Challenge/Lux-Design-2021/tree/master/kits/python) wiht
-some slight refactoring.
+simple [starter kit bot](https://github.com/Lux-AI-Challenge/Lux-Design-2021/tree/master/kits/python) 
+with some slight refactoring.
 
-Paths defined in `utils/base.py` need configured to the users' environment.
+Paths defined in `utils/base.py` may need configured to the users' environment.
 
 # Structure 
-`luxbot` - Actively developed bot
+`luxbot` - Actively developed bot - designate this as a source root in PyCharm (or otherwise modify the python path)
 
 `bots` - Space for persisting luxbot versions
 
@@ -18,7 +18,7 @@ Paths defined in `utils/base.py` need configured to the users' environment.
 
 `replays_active` - Stores the last replay saved. Drag this into a browser to view
 
-`create-bot.py` - Persist current version of `luxbot` and package as a submission.tar.gz :
+`create-bot.py` - Persist current version of `luxbot` to the `bots` folder and package as a submission.tar.gz :
 ```bash
 $ python ./create-bot.py version_id
 ```
@@ -27,7 +27,7 @@ $ python ./create-bot.py version_id
 
 `replay-game.py` - Replay a previous game from its json. Configuration done in script
 
-# Debugging
+# Debugging hotfix
 The agent (live or in a replay) should halt at set breakpoints. However
 `kaggle_environments/agent.py` will play an agent under the following IO redirect context and try/except block:
 ```python

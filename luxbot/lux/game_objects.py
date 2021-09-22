@@ -13,9 +13,12 @@ class Player:
         self.research_points = 0
         self.units: list[Unit] = []
         self.cities: Dict[str, City] = {}
+        self.citytiles: list[CityTile] = []
         self.city_tile_count = 0
+
     def researched_coal(self) -> bool:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
+
     def researched_uranium(self) -> bool:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
@@ -27,12 +30,21 @@ class City:
         self.fuel = fuel
         self.citytiles: list[CityTile] = []
         self.light_upkeep = light_upkeep
+
     def add_city_tile(self, x, y, cooldown):
         ct = CityTile(self.team, self.cityid, x, y, cooldown)
         self.citytiles.append(ct)
         return ct
+
     def get_light_upkeep(self):
         return self.light_upkeep
+
+    def get_time_to_expiration(self):
+        # fuel // costPerNightTurn
+        pass
+
+    def will_not_survive_night(self):
+        return (self.fuel / self.light_upkeep) <= 10
 
 
 class CityTile:
@@ -41,21 +53,28 @@ class CityTile:
         self.team = teamid
         self.pos = Position(x, y)
         self.cooldown = cooldown
+
+    def __repr__(self):
+        return f"({self.cityid} p:{self.pos} cd:{int(self.cooldown)})"
+
     def can_act(self) -> bool:
         """
         Whether or not this unit can research or build
         """
         return self.cooldown < 1
+
     def research(self) -> str:
         """
         returns command to ask this tile to research this turn
         """
         return "r {} {}".format(self.pos.x, self.pos.y)
+
     def build_worker(self) -> str:
         """
         returns command to ask this tile to build a worker this turn
         """
         return "bw {} {}".format(self.pos.x, self.pos.y)
+
     def build_cart(self) -> str:
         """
         returns command to ask this tile to build a cart this turn
@@ -73,6 +92,11 @@ class Cargo:
         return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
 
 
+class UnitLog:
+    city = None
+    citytile = None
+
+
 class Unit:
     def __init__(self, teamid, u_type, unitid, x, y, cooldown, wood, coal, uranium):
         self.pos = Position(x, y)
@@ -84,6 +108,11 @@ class Unit:
         self.cargo.wood = wood
         self.cargo.coal = coal
         self.cargo.uranium = uranium
+        self.log = UnitLog()
+
+    def __repr__(self):
+        return f"({self.type} {self.id})"
+
     def is_worker(self) -> bool:
         return self.type == UNIT_TYPES.WORKER
 
@@ -99,13 +128,17 @@ class Unit:
             return GAME_CONSTANTS["PARAMETERS"]["RESOURCE_CAPACITY"]["WORKER"] - spaceused
         else:
             return GAME_CONSTANTS["PARAMETERS"]["RESOURCE_CAPACITY"]["CART"] - spaceused
-    
-    def can_build(self, game_map) -> bool:
+
+    def can_afford_to_build(self):
+        return (self.cargo.wood + self.cargo.coal + self.cargo.uranium) \
+               >= GAME_CONSTANTS["PARAMETERS"]["CITY_BUILD_COST"]
+
+    def can_build_on_this_cell(self, game_map) -> bool:
         """
         whether or not the unit can build where it is right now
         """
         cell = game_map.get_cell_by_pos(self.pos)
-        if not cell.has_resource() and self.can_act() and (self.cargo.wood + self.cargo.coal + self.cargo.uranium) >= GAME_CONSTANTS["PARAMETERS"]["CITY_BUILD_COST"]:
+        if not cell.has_resource() and self.can_act() and self.can_afford_to_build():
             return True
         return False
 

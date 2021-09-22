@@ -80,6 +80,7 @@ class Game:
                 cooldown = float(strs[5])
                 city = self.players[team].cities[cityid]
                 citytile = city.add_city_tile(x, y, cooldown)
+                self.players[team].citytiles.append(citytile)
                 self.map.get_cell(x, y).citytile = citytile
                 self.players[team].city_tile_count += 1
             elif input_identifier == INPUT_CONSTANTS.ROADS:

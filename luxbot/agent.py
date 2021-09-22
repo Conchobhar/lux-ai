@@ -4,7 +4,7 @@ import random
 import sys
 from enum import Enum
 import itertools
-from typing import List, Dict
+from typing import Dict
 
 from lux.game import Game
 from lux.game_map import Cell, RESOURCE_TYPES
@@ -53,7 +53,7 @@ def pos2cell(pos: Position) -> Cell:
     return game.map.get_cell_by_pos(pos)
 
 
-def group_units_by_requested_cells(units2cells: dict[Unit]):
+def group_units_by_requested_cells(units2cells: Dict[Unit, list[Cell]]):
     cell2units = {}
     for u, c in units2cells.items():
         if c in cell2units:
@@ -76,9 +76,9 @@ class MyAgent:
         self.worker_add_this_turn = 0
         self.num_workers = 0
         self.num_cities = 0
-        self.reserved_cells: dict[Cell] = {}
-        self.set_actions: dict[Unit] = {}
-        self.set_cells: dict[Unit] = {}
+        self.reserved_cells: Dict[Cell, Unit] = {}
+        self.set_actions: Dict[Unit, str] = {}
+        self.set_cells: Dict[Unit, Cell] = {}
 
     def time_to_night(self):
         cycle_length = GAME_CONSTANTS['PARAMETERS']['DAY_LENGTH'] + GAME_CONSTANTS['PARAMETERS']['NIGHT_LENGTH']
@@ -141,7 +141,7 @@ class MyAgent:
             print(f"WARNING: Catch all task returned.")
             return Task.WANDER
 
-    def get_resource_cells_by_worth(self, unit: Unit) -> dict[Cell, float]:
+    def get_resource_cells_by_worth(self, unit: Unit) -> Dict[Cell, float]:
         rc2worth = {}
         for rc in self.resource_cells:
             # TODO - value by gather radius
@@ -256,11 +256,11 @@ class MyAgent:
         self.set_commands = []
         self.set_research()
         # self.produce_workers()
-        self.reserved_cells: dict[Cell] = {}
-        self.set_actions: dict[Unit] = {}
-        self.set_cells: dict[Unit] = {}
+        self.reserved_cells: Dict[Cell] = {}
+        self.set_actions: Dict[Unit] = {}
+        self.set_cells: Dict[Unit] = {}
         self.set_researchers: list[CityTile] = []
-        self.prospective_actions: dict[Unit] = {}
+        self.prospective_actions: Dict[Unit] = {}
         """
         Get task for worker
         gather
@@ -283,7 +283,7 @@ class MyAgent:
                 raise Exception(f"action resolution iteration > 24 - probable infinite loop")
             unassigned_worker_units = [u for u in actable_worker_units if u not in self.set_actions]
             self.prospective_actions = {}
-            units2prospective_cell: dict[Unit] = {}
+            units2prospective_cell: Dict[Unit] = {}
             for unit in unassigned_worker_units:
                 task = self.determine_task(unit)
                 cell_target = self.determine_target_cell_for_task(unit, task)

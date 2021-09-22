@@ -4,7 +4,7 @@ import random
 import sys
 from enum import Enum
 import itertools
-from typing import Dict
+from typing import Dict, List
 
 from lux.game import Game
 from lux.game_map import Cell, RESOURCE_TYPES
@@ -53,7 +53,7 @@ def pos2cell(pos: Position) -> Cell:
     return game.map.get_cell_by_pos(pos)
 
 
-def group_units_by_requested_cells(units2cells: Dict[Unit, list[Cell]]):
+def group_units_by_requested_cells(units2cells: Dict[Unit, List[Cell]]):
     cell2units = {}
     for u, c in units2cells.items():
         if c in cell2units:
@@ -115,7 +115,7 @@ class MyAgent:
                         break
 
     @staticmethod
-    def get_citytiles(player) -> list[CityTile]:
+    def get_citytiles(player) -> List[CityTile]:
         return [ct for _, city in player.cities.items() for ct in city.citytiles]
 
     def get_nearest_city_and_tile(self, unit: Unit) -> (City, CityTile):
@@ -204,7 +204,7 @@ class MyAgent:
 
     def get_resource_cells(self):
         """Collect resource tiles. Ignore advanced materials if unobtainable so far."""
-        resource_cells: list[Cell] = []
+        resource_cells: List[Cell] = []
         for y in range(self.height):
             for x in range(self.width):
                 cell = self.g.map.get_cell(x, y)
@@ -259,7 +259,7 @@ class MyAgent:
         self.reserved_cells: Dict[Cell] = {}
         self.set_actions: Dict[Unit] = {}
         self.set_cells: Dict[Unit] = {}
-        self.set_researchers: list[CityTile] = []
+        self.set_researchers: List[CityTile] = []
         self.prospective_actions: Dict[Unit] = {}
         """
         Get task for worker

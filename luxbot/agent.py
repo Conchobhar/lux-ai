@@ -59,25 +59,30 @@ def group_units_by_requested_cells(units2cells: dict[Unit]):
         if c in cell2units:
             cell2units[c].append(u)
         else:
-            cell2units[c] = [u,]
+            cell2units[c] = [u, ]
     return cell2units
 
 
 class MyAgent:
 
-    def __init__(self, game):
-        self.g = game
-        self.player = game.players[game.id]
-        self.opponent = game.players[(game.id + 1) % 2]
-        self.height = game.map.height
-        self.width = game.map.width
+    def __init__(self, game_state):
+        self.g = game_state
+        self.player = game_state.players[game_state.id]
+        self.opponent = game_state.players[(game_state.id + 1) % 2]
+        self.height = game_state.map.height
+        self.width = game_state.map.width
         self.resource_cells: set[Cell] = set()
         self.potential_city_cells: set[Cell] = set()
         self.worker_add_this_turn = 0
+        self.num_workers = 0
+        self.num_cities = 0
+        self.reserved_cells: dict[Cell] = {}
+        self.set_actions: dict[Unit] = {}
+        self.set_cells: dict[Unit] = {}
 
     def time_to_night(self):
-        CYCLE_LENGTH = GAME_CONSTANTS['PARAMETERS']['DAY_LENGTH'] + GAME_CONSTANTS['PARAMETERS']['NIGHT_LENGTH']
-        return GAME_CONSTANTS['PARAMETERS']['DAY_LENGTH'] - (self.g.turn % CYCLE_LENGTH)
+        cycle_length = GAME_CONSTANTS['PARAMETERS']['DAY_LENGTH'] + GAME_CONSTANTS['PARAMETERS']['NIGHT_LENGTH']
+        return GAME_CONSTANTS['PARAMETERS']['DAY_LENGTH'] - (self.g.turn % cycle_length)
 
     def is_night(self):
         return self.time_to_night() < 1
@@ -86,8 +91,14 @@ class MyAgent:
         possible_workers = len(self.get_citytiles(self.player)) - len(self.player.units)
         return possible_workers - self.worker_add_this_turn
 
-    def determine_research(self):
-        pass
+    def set_research(self):
+        if self.num_cities >= 3:
+            actable_citytiles = [ct for ct in self.get_citytiles(self.player) if ct.can_act()]
+            num_researchers = len(actable_citytiles) // 2
+            for citytile in actable_citytiles[0:num_researchers]:
+                self.set_commands.append(citytile.research())
+                self.set_researchers.append(citytile)
+
 
     def map_workers_to_city_tiles(self):
         import itertools
@@ -110,7 +121,8 @@ class MyAgent:
     def get_nearest_city_and_tile(self, unit: Unit) -> (City, CityTile):
         city2closest_citytile = {}
         for _, city in self.player.cities.items():
-            city2closest_citytile[city] = min([ct for ct in city.citytiles], key=lambda ct: unit.pos.distance_to(ct.pos))
+            city2closest_citytile[city] = min([ct for ct in city.citytiles],
+                                              key=lambda ct: unit.pos.distance_to(ct.pos))
         return min(city2closest_citytile.items(), key=lambda x: unit.pos.distance_to(x[1].pos))
 
     def determine_task(self, worker: Unit) -> Task:
@@ -133,7 +145,7 @@ class MyAgent:
         rc2worth = {}
         for rc in self.resource_cells:
             # TODO - value by gather radius
-            rc2worth[rc] = (rc.resource.amount / ((unit.pos.distance_to(rc.pos) + 1)))
+            rc2worth[rc] = (rc.resource.amount / (unit.pos.distance_to(rc.pos) + 1))
         return rc2worth
 
     def determine_target_cell_for_task(self, unit: Unit, task: Task) -> Cell:
@@ -156,19 +168,23 @@ class MyAgent:
             DIRECTIONS.EAST,
             DIRECTIONS.SOUTH,
             DIRECTIONS.WEST,
+            DIRECTIONS.CENTER,
         ]
-        closest_dist = unit.pos.distance_to(cell.pos)
-        closest_dir = DIRECTIONS.CENTER
+        closest_dist = None  #
+        closest_dir = None
         for direction in check_dirs:
             newpos = unit.pos.translate(direction, 1)
-            is_on_board = self.g.map.is_valid_position(newpos)
-            not_reserved = pos2cell(newpos) not in self.set_cells.values()
-            is_not_enemy_ct = pos2cell(newpos) not in self.opponent.citytiles
-            if is_on_board and not_reserved and is_not_enemy_ct:
-                dist = cell.pos.distance_to(newpos)
-                if dist < closest_dist:
-                    closest_dir = direction
-                    closest_dist = dist
+            if self.g.map.is_valid_position(newpos):
+                not_reserved = pos2cell(newpos) not in self.set_cells.values()
+                is_not_enemy_ct = pos2cell(newpos) not in self.opponent.citytiles
+                if not_reserved and is_not_enemy_ct:
+                    dist = cell.pos.distance_to(newpos)
+                    if closest_dist is None or dist < closest_dist:
+                        closest_dir = direction
+                        closest_dist = dist
+        if closest_dir is None:
+            print(f"Alert: pathfinding defaulting to North for {unit}", file=sys.stderr)
+            closest_dir = DIRECTIONS.NORTH  # TODO - Weight directions and pick least worst in this case.
         return closest_dir
 
     def determine_action_for_cell(self, unit: Unit, task: Task, cell: Cell) -> str:
@@ -176,12 +192,12 @@ class MyAgent:
             action = self.pathfind(unit, cell)
         else:
             if task == Task.GATHER:
-                action = 'c'
+                action = self.pathfind(unit, cell)
             elif task == Task.BUILD:
                 action = 'bcity'
             elif task == Task.DEPOSIT:
                 closest_city_cell = min(self.get_citytiles(self.player), key=lambda c: unit.pos.distance_to(c.pos))
-                action = unit.pos.direction_to(closest_city_cell.pos)
+                action = self.pathfind(unit, pos2cell(closest_city_cell.pos))
             else:  # Task.WANDER
                 action = random.choice(DIRECTIONS.get_all())
         return action
@@ -212,10 +228,14 @@ class MyAgent:
         self.resource_cells = self.get_resource_cells()
         self.potential_city_cells = self.get_potential_city_cells()
 
+    def confirm_commands(self, u, c):
+        if u.can_act():  # Avoids warnings about units not able to act even when acting to stay still.
+            self.set_commands.append(get_command_from_action(u, self.prospective_actions[u]))
+            self.set_actions[u] = self.prospective_actions[u]
+        self.set_cells[u] = c
+
     def get_actions(self, g):
         """Next
-            - basic deposit strategy - keep nearest city alive.
-            - "if wont_make_it_past_night_next_turn" go to city
             - value resources by net harvest across all cells
             - spawn citytiles efficiently i.e. adjacent each other
                 - limit cts by resources
@@ -233,9 +253,14 @@ class MyAgent:
         self.num_workers = len([u for u in self.player.units if u.is_worker()])
         self.generate_stats()
         self.map_workers_to_city_tiles()
-        self.determine_research()
-
+        self.set_commands = []
+        self.set_research()
         # self.produce_workers()
+        self.reserved_cells: dict[Cell] = {}
+        self.set_actions: dict[Unit] = {}
+        self.set_cells: dict[Unit] = {}
+        self.set_researchers: list[CityTile] = []
+        self.prospective_actions: dict[Unit] = {}
         """
         Get task for worker
         gather
@@ -245,11 +270,11 @@ class MyAgent:
             -- zone is saturated
         """
         # Determine unit actions
-        self.reserved_cells: dict[Cell] = {}
-
-        self.set_actions: dict[Unit] = {}
-        self.set_cells: dict[Unit] = {}
-        set_commands = []
+        nonactable_worker_units = [u for u in self.player.units if u.is_worker() and not u.can_act()]
+        for unit in nonactable_worker_units:
+            if pos2cell(unit.pos).citytile is None:
+                self.prospective_actions[unit] = 'c'
+                self.confirm_commands(unit, pos2cell(unit.pos))
         actable_worker_units = [u for u in self.player.units if u.is_worker() and u.can_act()]
         action_iter = 0
         while len(self.set_actions) < len(actable_worker_units):
@@ -257,44 +282,40 @@ class MyAgent:
             if action_iter > 24:
                 raise Exception(f"action resolution iteration > 24 - probable infinite loop")
             unassigned_worker_units = [u for u in actable_worker_units if u not in self.set_actions]
-            prospective_actions: dict[Unit] = {}
+            self.prospective_actions = {}
             units2prospective_cell: dict[Unit] = {}
             for unit in unassigned_worker_units:
                 task = self.determine_task(unit)
                 cell_target = self.determine_target_cell_for_task(unit, task)
                 action = self.determine_action_for_cell(unit, task, cell_target)
                 cell_next = pos2cell(unit.pos.translate(action2direction[action], 1))
-                prospective_actions[unit] = action
+                self.prospective_actions[unit] = action
                 units2prospective_cell[unit] = cell_next
 
             # ACTION CONFLICT RESOLUTION
             # Confirm non-conflicting actions. Record set actions in ship log to keep track of
             # how many ships actions are finalized. Resolve actions outwards from shipyards.
-            def confirm_commands(u, c):
-                set_commands.append(get_command_from_action(u, prospective_actions[u]))
-                self.set_actions[u] = prospective_actions[u]
-                self.set_cells[u] = c
             cell2units = group_units_by_requested_cells(units2prospective_cell)
             for cell, units in cell2units.items():
                 if cell.citytile is None:  # Give spot to highest priority ship
                     unit = min(units, key=lambda u: u.cargo.wood)
-                    confirm_commands(unit, cell)
+                    self.confirm_commands(unit, cell)
                 else:
                     for unit in units:
-                        confirm_commands(unit, cell)
+                        self.confirm_commands(unit, cell)
 
         # Determine worker building
         self.worker_add_this_turn = 0
         should_build = self.potential_worker_count() > 0
         if should_build:
             for citytile in self.get_citytiles(self.player):
-                if citytile.can_act() and self.potential_worker_count() > 0:
-                    set_commands.append(citytile.build_worker())
+                if citytile.can_act() and self.potential_worker_count() > 0 and citytile not in self.set_researchers:
+                    self.set_commands.append(citytile.build_worker())
                     self.worker_add_this_turn += 1
 
         # you can add debug annotations using the functions in the annotate object
         # actions.append(annotate.circle(0, 0))
-        return set_commands
+        return self.set_commands
 
 
 def agent(obs, config):

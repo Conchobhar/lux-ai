@@ -24,7 +24,7 @@ class Cell:
         self.road = 0
 
     def __repr__(self) -> str:
-        return f"({self.pos}) R:{self.resource} CT: {self.citytile}"
+        return f"C({self.pos} R:{self.resource} CT: {self.citytile})"
 
     def has_resource(self):
         return self.resource is not None and self.resource.amount > 0

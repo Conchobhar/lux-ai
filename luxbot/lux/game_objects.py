@@ -95,6 +95,9 @@ class Cargo:
 class UnitLog:
     city = None
     citytile = None
+    prospective_action = None
+    set_action = None
+    set_cell = None
 
 
 class Unit:
@@ -111,7 +114,7 @@ class Unit:
         self.log = UnitLog()
 
     def __repr__(self):
-        return f"({self.type} {self.id})"
+        return f"U({self.type} {self.id})"
 
     def is_worker(self) -> bool:
         return self.type == UNIT_TYPES.WORKER

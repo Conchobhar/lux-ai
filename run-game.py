@@ -2,8 +2,12 @@ import utils
 from kaggle_environments import make
 from luxbot.agent import agent
 
-
-env = make("lux_ai_2021", configuration={"seed": 562124210, "loglevel": 2, "annotations": True}, debug=True)
+TIMEOUT = 0
+if TIMEOUT == 0:
+    print('Timeout set to 0.')
+env = make("lux_ai_2021", debug=True,
+           configuration={
+               "seed": 562124210, "loglevel": 2, "annotations": True, "actTimeout": TIMEOUT},)
 steps = env.run([agent, "simple_agent"])
 render_kwargs = {
     'width': 1200,

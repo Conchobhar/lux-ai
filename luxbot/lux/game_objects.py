@@ -1,11 +1,11 @@
 from typing import Dict, List
 
 from .constants import Constants
-from .game_map import Position
+from .game_map import Position, MapZone
 from .game_constants import GAME_CONSTANTS
 
 UNIT_TYPES = Constants.UNIT_TYPES
-
+RESOURCE_TYPES = Constants.RESOURCE_TYPES
 
 class Player:
     def __init__(self, team):
@@ -31,8 +31,11 @@ class City:
         self.citytiles: List[CityTile] = []
         self.light_upkeep = light_upkeep
 
-    def add_city_tile(self, x, y, cooldown):
-        ct = CityTile(self.team, self.cityid, x, y, cooldown)
+    def __repr__(self):
+        return f"C({self.cityid} fuel:{self.fuel} nights left:{(self.fuel//self.light_upkeep)})"
+
+    def add_city_tile(self, x, y, cooldown, playerid):
+        ct = CityTile(self, x, y, cooldown, playerid)
         self.citytiles.append(ct)
         return ct
 
@@ -46,13 +49,22 @@ class City:
     def will_not_survive_night(self):
         return (self.fuel / self.light_upkeep) <= 10
 
+    def is_worth_saving(self, night_left):
+        return ((night_left * self.light_upkeep) - self.fuel) <= 100
+
 
 class CityTile:
-    def __init__(self, teamid, cityid, x, y, cooldown):
-        self.cityid = cityid
-        self.team = teamid
+    def __init__(self, city, x, y, cooldown, playerid):
+        self.cityid = city.cityid
+        self.city = city
+        self.team = city.team  # What player does this belong to?
         self.pos = Position(x, y)
         self.cooldown = cooldown
+        self.playerid = playerid  # What player generated this?
+        self.zone: MapZone = None
+
+    def is_player_citytile(self):
+        return self.team == self.playerid
 
     def __repr__(self):
         return f"({self.cityid} p:{self.pos} cd:{int(self.cooldown)})"
@@ -88,16 +100,36 @@ class Cargo:
         self.coal = 0
         self.uranium = 0
 
+    def sum_total(self):
+        return self.wood + self.coal + self.uranium
+
     def __str__(self) -> str:
         return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
+
+    def __getitem__(self, item):
+        if item == RESOURCE_TYPES.WOOD:
+            return self.wood
+        if item == RESOURCE_TYPES.COAL:
+            return self.coal
+        if item == RESOURCE_TYPES.URANIUM:
+            return self.uranium
 
 
 class UnitLog:
     city = None
     citytile = None
+    resource_cell = None
     prospective_action = None
     set_action = None
     set_cell = None
+    task = None  # Task assignment loop
+    cell_target = None  # Task assignment loop
+    action = None  # Task assignment loop
+    cell_next = None  # Task assignment loop
+    max_safe_distance = None  # Est. how far unit can travel before expiring
+    zone_assigned: MapZone = None
+    zone_closest: MapZone = None
+    zone_gather_cell: 'Cell' = None
 
 
 class Unit:
@@ -121,6 +153,18 @@ class Unit:
 
     def is_cart(self) -> bool:
         return self.type == UNIT_TYPES.CART
+
+    def fuel(self):
+        return self.cargo.wood + self.cargo.coal*10 + self.cargo.uranium*40
+
+    def is_fuel_efficient(self):
+        return self.fuel() >= 500
+
+    def light_upkeep(self):
+        return 4 if self.type == 0 else 10
+
+    def will_not_survive_night(self, remaining_night):
+        return (self.fuel() / self.light_upkeep()) <= remaining_night  # TODO +prospective fuel from harvesting
 
     def get_cargo_space_left(self):
         """

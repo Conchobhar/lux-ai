@@ -33,8 +33,6 @@ if __name__ == '__main__':
         else:
             logger.info('Overwriting old version...')
             shutil.rmtree(version_path)
-    else:
-        os.mkdir(version_path)
     shutil.copytree(source_path, version_path)
     with tarfile.open(root_path / 'submission.tar.gz', "w:gz") as tar:
         tar.add(version_path, arcname='.')

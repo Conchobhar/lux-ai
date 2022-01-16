@@ -1,13 +1,14 @@
 # Lux AI Challenge
 https://www.kaggle.com/c/lux-ai-2021/
 
-Contains development enviornment for building bots with PyCharm in mind.
+# About
+Rules based bot for Lux AI simulation competition. Struggled to keep it in top 200 before abandoning. Final leader board position - 431 .
 
-The current `luxbot` contains the 
-simple [starter kit bot](https://github.com/Lux-AI-Challenge/Lux-Design-2021/tree/master/kits/python) 
-with some slight refactoring.
+**Features of note**
 
-Paths defined in `utils/base.py` may need configured to the users' environment.
+[A* pathfinding](https://github.com/git/git/blob/master/luxbot/lux/game_map.py#L391)
+
+[Flood fill for grouping resource cells](https://github.com/git/git/blob/master/luxbot/lux/game_map.py#L328)
 
 # Structure 
 `luxbot` - Actively developed bot - designate this as a source root in PyCharm (or otherwise modify the python path)
@@ -26,6 +27,8 @@ $ python ./create-bot.py version_id
 `run-game.py` -  Run bots against each other. Configuration done in script
 
 `replay-game.py` - Replay a previous game from its json. Configuration done in script
+
+*Note:* Paths defined in `utils/base.py` may need configured to the users' environment.
 
 # Debugging hotfix
 The agent (live or in a replay) should halt at set breakpoints. However

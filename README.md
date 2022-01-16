@@ -6,11 +6,11 @@ Rules based bot for Lux AI simulation competition. Struggled to keep it in top 2
 
 **Features of note**
 
-[A* pathfinding](https://github.com/git/git/blob/master/luxbot/lux/game_map.py#L391)
+[A* pathfinding](https://github.com/Conchobhar/lux-ai/blob/main/luxbot/lux/game_map.py#L391)
 
 ![Units determine best move based on path (line segments) to target destination](resources/luxai-astar.png)
 
-[Flood fill for grouping resource cells](https://github.com/git/git/blob/master/luxbot/lux/game_map.py#L328)
+[Flood fill for grouping resource cells](https://github.com/Conchobhar/lux-ai/blob/main/luxbot/lux/game_map.py#L328)
 
 # Structure 
 `luxbot` - Actively developed bot - designate this as a source root in PyCharm (or otherwise modify the python path)
